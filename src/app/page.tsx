@@ -1,10 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 export default function JoinForm() {
-  const router = useRouter();
   const [name, setName] = useState("");
   const [accessCode, setAccessCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -25,8 +23,9 @@ export default function JoinForm() {
         setError(json.error ?? "Não foi possível entrar.");
         return;
       }
-      router.replace("/room");
-      router.refresh();
+      // Navegação nativa: mais compatível com navegadores antigos (iOS 15, etc.)
+      // router.refresh() pode falhar silenciosamente no Safari 15.
+      window.location.href = "/room";
     } catch {
       setError("Falha de rede. Tente novamente.");
     } finally {

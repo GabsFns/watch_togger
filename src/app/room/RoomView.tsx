@@ -343,7 +343,7 @@ export default function RoomView() {
                   playerRef.current?.play();
                   push("play", { playbackState: "playing" });
                 }}
-                className="rounded-xl bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-900"
+                className="min-h-[44px] min-w-[44px] touch-manipulation rounded-xl bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-900"
               >
                 Iniciar reprodução
               </button>

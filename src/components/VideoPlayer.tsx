@@ -303,7 +303,7 @@ export function VideoPlayer({ videoId: videoIdProp, events, handleRef }: { video
                 try { p.loadVideoById(videoIdProp ?? ""); } catch {}
               }
             }}
-            className="rounded-xl bg-zinc-100 px-5 py-2 text-sm font-semibold text-zinc-900"
+            className="min-h-[44px] min-w-[44px] touch-manipulation rounded-xl bg-zinc-100 px-5 py-2 text-sm font-semibold text-zinc-900"
           >
             Tentar novamente
           </button>

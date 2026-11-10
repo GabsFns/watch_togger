@@ -27,7 +27,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body suppressHydrationWarning className="min-h-dvh flex flex-col bg-[#0e0e10] text-zinc-100">{children}</body>
+      <body className="min-h-dvh flex flex-col bg-[#0e0e10] text-zinc-100">{children}</body>
     </html>
   );
 }

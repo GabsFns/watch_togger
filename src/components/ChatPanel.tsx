@@ -64,7 +64,7 @@ export function ChatPanel(props: {
             autoComplete="off"
             className="h-11 flex-1 rounded-xl border border-[#2a2a31] bg-[#0e0e10] px-3 text-sm text-zinc-100 placeholder:text-zinc-500 outline-none focus:border-zinc-500"
           />
-          <button type="submit" className="h-11 rounded-xl bg-zinc-100 px-4 text-sm font-semibold text-zinc-900">
+          <button type="submit" className="h-11 min-h-[44px] min-w-[44px] touch-manipulation rounded-xl bg-zinc-100 px-4 text-sm font-semibold text-zinc-900">
             Enviar
           </button>
         </div>

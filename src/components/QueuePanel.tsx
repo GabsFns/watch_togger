@@ -26,7 +26,7 @@ export function QueuePanel(props: {
               <div className="min-w-0 flex-1">
                 <button
                   onClick={() => onSelect(it)}
-                  className={`block w-full truncate text-left text-sm font-medium ${it.video_id === currentVideoId ? "text-emerald-300" : "text-zinc-100"}`}
+                  className={`block w-full min-h-[44px] min-w-[44px] touch-manipulation truncate text-left text-sm font-medium ${it.video_id === currentVideoId ? "text-emerald-300" : "text-zinc-100"}`}
                 >
                   {it.video_title ?? it.video_id}
                 </button>
@@ -35,7 +35,7 @@ export function QueuePanel(props: {
               <button
                 onClick={() => onRemove(it)}
                 aria-label="Remover da fila"
-                className="rounded-lg border border-[#2a2a31] px-2 py-1 text-xs text-zinc-400"
+                className="min-h-[44px] min-w-[44px] touch-manipulation rounded-lg border border-[#2a2a31] px-2 py-1 text-xs text-zinc-400"
               >
                 ✕
               </button>
