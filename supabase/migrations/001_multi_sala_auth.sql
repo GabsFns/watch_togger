@@ -99,11 +99,11 @@ begin
 end;
 $$;
 
-create trigger if not exists rooms_touch
+create trigger rooms_touch
   before update on public.rooms
   for each row execute function public.touch_updated_at();
 
-create trigger if not exists room_state_touch
+create trigger room_state_touch
   before update on public.room_state
   for each row execute function public.touch_updated_at();
 
@@ -120,7 +120,7 @@ begin
 end;
 $$;
 
-create trigger if not exists on_auth_user_created
+create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
@@ -207,10 +207,18 @@ create policy queue_owner on public.video_queue
   );
 
 -- ============================================================
--- Realtime publications
+-- Realtime publications (habilite via dashboard do Supabase)
 -- ============================================================
-
-alter publication supabase_realtime add table public.room_state;
-alter publication supabase_realtime add table public.chat_messages;
-alter publication supabase_realtime add table public.video_queue;
-alter publication supabase_realtime add table public.room_participants;
+-- Se a publicação supabase_realtime não existir no seu projeto,
+-- crie-a primeiro no SQL Editor:
+--
+--   create publication supabase_realtime;
+--
+-- Depois adicione as tabelas:
+--
+--   alter publication supabase_realtime add table public.room_state;
+--   alter publication supabase_realtime add table public.chat_messages;
+--   alter publication supabase_realtime add table public.video_queue;
+--   alter publication supabase_realtime add table public.room_participants;
+--
+-- Ou habilite via dashboard: Realtime → Tables → selecione as 4 tabelas acima.

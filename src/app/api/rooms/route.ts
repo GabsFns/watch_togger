@@ -72,6 +72,7 @@ export async function POST(req: NextRequest) {
         owner_id: session.user.id,
         name,
         max_participants: maxParticipants,
+        invite_code: inviteCode,
         invite_code_hash: inviteCodeHash,
         invite_expires_at: inviteExpiresAt,
       })
