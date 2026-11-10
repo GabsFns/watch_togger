@@ -46,7 +46,7 @@ export default function JoinForm() {
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Ex.: Ana"
+          placeholder="Ex.: Gabriel"
           maxLength={40}
           required
           className="h-12 rounded-xl border border-[#2a2a31] bg-[#0e0e10] px-4 text-sm text-zinc-100 outline-none focus:border-zinc-500"
