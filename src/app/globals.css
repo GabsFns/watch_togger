@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0e0e10;
+  --foreground: #f4f4f5;
+  --panel: #16161a;
+  --panel-2: #1d1d22;
+  --border: #2a2a31;
+  --muted: #a1a1aa;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-panel: var(--panel);
+  --color-panel2: var(--panel-2);
+  --color-border2: var(--border);
+  --color-muted: var(--muted);
+}
+
+html, body { height: 100%; }
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+/* iOS safe areas */
+@supports (padding: env(safe-area-inset-top)) {
+  .safe-top { padding-top: env(safe-area-inset-top); }
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+}
+
+/* Player 16:9 */
+.video-shell { aspect-ratio: 16 / 9; width: 100%; background: #000; }
+.video-shell iframe { width: 100%; height: 100%; border: 0; display: block; }
+
+/* Scrollbar discreta */
+* { scrollbar-width: thin; scrollbar-color: #3f3f46 transparent; }
+*::-webkit-scrollbar { width: 6px; height: 6px; }
+*::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 999px; }
+
+/* Evita hover-dependência em touch */
+@media (hover: none) {
+  .hover-only { display: none; }
+}
