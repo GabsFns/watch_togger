@@ -19,7 +19,11 @@ interface RoomPayload {
   queue: QueueItem[];
 }
 
-export default function RoomView() {
+interface RoomViewProps {
+  roomId?: string;
+}
+
+export default function RoomView({ roomId: roomIdProp }: RoomViewProps) {
   const [data, setData] = useState<RoomPayload | null>(null);
   const [state, setState] = useState<RoomState | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -34,7 +38,7 @@ export default function RoomView() {
   const [chatError, setChatError] = useState<string | null>(null);
   const [urlInput, setUrlInput] = useState("");
   const [authorized, setAuthorized] = useState(false);
-  const [manualStart, setManualStart] = useState(false); // iOS: precisa de gesto
+  const [manualStart, setManualStart] = useState(false);
   const manualStartRef = useRef(false);
   const [playerReady, setPlayerReady] = useState(false);
   const [activeTab, setActiveTab] = useState<"video" | "chat">("video");
@@ -48,8 +52,11 @@ export default function RoomView() {
   const videoIdRef = useRef<string | null>(null);
   videoIdRef.current = videoId;
 
+  const roomIdRef = useRef<string | null>(roomIdProp);
+  roomIdRef.current = roomIdProp;
+
   const { push, markSeen } = useSyncService({
-    roomId: data?.room.id ?? null,
+    roomId: data?.room.id ?? roomIdRef.current ?? null,
     isLeader: () => true,
     getLocalState: () => ({
       currentVideoId: videoId,
@@ -61,8 +68,10 @@ export default function RoomView() {
     onError: setError,
   });
 
+  const qs = roomIdRef.current ? `?roomId=${encodeURIComponent(roomIdRef.current)}` : "";
+
   const loadRoom = useCallback(async () => {
-    const res = await fetch("/api/room", { credentials: "include" });
+    const res = await fetch(`/api/room${qs}`, { credentials: "include" });
     if (!res.ok) {
       setError("Não autorizado. Entre novamente.");
       return;
@@ -76,19 +85,18 @@ export default function RoomView() {
     if (json.state?.current_video_id) setVideoId(json.state.current_video_id);
     if (json.state?.action_id) markSeen(json.state.action_id);
     setAuthorized(true);
-  }, [markSeen]);
+  }, [qs, markSeen]);
 
   useEffect(() => {
     loadRoom().catch(() => setError("Falha ao carregar a sala."));
-    // Reconciliação periódica (fallback caso Realtime caia)
     const t = setInterval(loadRoom, 20000);
     return () => clearInterval(t);
   }, [loadRoom]);
 
   useRealtime({
-    roomId: data?.room.id ?? null,
+    roomId: data?.room.id ?? roomIdRef.current ?? null,
     onState: (s) => {
-      setState(prev => {
+      setState((prev) => {
         if (prev?.action_id === s.action_id) return prev;
         return s;
       });
@@ -100,8 +108,6 @@ export default function RoomView() {
     onParticipants: (p) => setParticipants(p),
   });
 
-  // Aplica estado remoto no player local — simples, igual ao debug.
-  // Só muda o vídeo (VideoPlayer cue sozinho) e play/pause. Sem seek forçado.
   const applyRemoteState = useCallback((s: RoomState) => {
     const player = playerRef.current;
     if (!player?.ready) {
@@ -109,12 +115,10 @@ export default function RoomView() {
       return;
     }
     if (!s.current_video_id) return;
-    // Mudança de vídeo: o VideoPlayer faz cue via efeito próprio.
     if (s.current_video_id !== videoIdRef.current) {
       setVideoId(s.current_video_id);
       return;
     }
-    // Play/pause: só reproduz se o usuário já deu o gesto local.
     if (s.playback_state === "playing") {
       if (manualStartRef.current) {
         try { player.play(); } catch {}
@@ -127,12 +131,10 @@ export default function RoomView() {
 
   useEffect(() => {
     if (!state) return;
-    // Evita aplicar eco do nosso próprio push nos primeiros 1.5s
     if (Date.now() - lastLocalActionAtRef.current < 1500) return;
     applyRemoteState(state);
   }, [state, applyRemoteState]);
 
-  // Presence online/offline (30s)
   const presence = participants.map((p) => ({
     ...p,
     online: Date.now() - new Date(p.last_seen_at).getTime() < 30000,
@@ -140,8 +142,6 @@ export default function RoomView() {
 
   async function addVideo(e: React.FormEvent) {
     e.preventDefault();
-    // Parser extrai SOMENTE o videoId; timestamp (t=) é preservado só
-    // como startSeconds local — nunca faz parte da ID enviada ao player.
     const parsed = parseYouTubeUrl(urlInput);
     if (!parsed) {
       setError("Cole um link válido do YouTube (watch?v=, youtu.be/, embed/ ou ID).");
@@ -150,8 +150,7 @@ export default function RoomView() {
     const id = parsed.videoId;
     const startAt = parsed.startSeconds ?? 0;
     setError(null);
-    // Adiciona à fila
-    const resQ = await fetch("/api/queue", {
+    const resQ = await fetch(`/api/queue${qs}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url: urlInput, videoId: id }),
@@ -161,9 +160,7 @@ export default function RoomView() {
       setQueueError(j.error ?? "Falha ao adicionar.");
       return;
     }
-    // Carrega como vídeo atual. O timestamp inicial é aplicado localmente
-    // via cue+seek e NÃO entra na sincronização (room_state começa em 0).
-    const resPlay = await fetch("/api/play", {
+    const resPlay = await fetch(`/api/play${qs}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ videoId: id }),
@@ -171,7 +168,6 @@ export default function RoomView() {
     if (resPlay.ok) {
       setVideoId(id);
       if (startAt > 0) {
-        // Único seek local — não dispara push de sincronização.
         setTimeout(() => { try { playerRef.current?.seekTo(startAt); } catch {} }, 900);
       }
       await push("load_video", { currentVideoId: id, playbackState: "paused", currentTime: 0 });
@@ -180,7 +176,7 @@ export default function RoomView() {
   }
 
   async function handleSendMessage(text: string) {
-    const res = await fetch("/api/chat", {
+    const res = await fetch(`/api/chat${qs}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: text }),
@@ -194,7 +190,7 @@ export default function RoomView() {
   }
 
   async function handleSelectQueue(item: QueueItem) {
-    const res = await fetch("/api/play", {
+    const res = await fetch(`/api/play${qs}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ videoId: item.video_id }),
@@ -209,7 +205,9 @@ export default function RoomView() {
   }
 
   async function handleRemoveQueue(item: QueueItem) {
-    const res = await fetch(`/api/queue/delete?id=${encodeURIComponent(item.id)}`, { method: "DELETE" });
+    const res = await fetch(`/api/queue/delete?id=${encodeURIComponent(item.id)}${qs}`, {
+      method: "DELETE",
+    });
     if (!res.ok) {
       const j = await res.json().catch(() => ({}));
       setQueueError(j.error ?? "Falha ao remover.");
@@ -229,11 +227,10 @@ export default function RoomView() {
 
   return (
     <div className="safe-top mx-auto flex min-h-dvh w-full max-w-6xl flex-col gap-4 px-4 py-4 sm:px-6">
-      {/* Header */}
       <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#2a2a31] bg-[#16161a] px-4 py-3">
         <div>
           <h1 className="text-base font-semibold text-zinc-100">{data?.room.name ?? "Sala privada"}</h1>
-          <p className="text-xs text-zinc-400">Watch Together — sala para 2 pessoas</p>
+          <p className="text-xs text-zinc-400">Watch Together — sala privada</p>
         </div>
         <div className="flex items-center gap-2">
           {presence.map((p) => (
@@ -253,21 +250,19 @@ export default function RoomView() {
         </div>
       )}
 
-      {/* Add video */}
       <form onSubmit={addVideo} className="flex gap-2">
         <input
           value={urlInput}
           onChange={(e) => setUrlInput(e.target.value)}
           placeholder="Cole o link do YouTube…"
           inputMode="url"
-          className="h-12 flex-1 rounded-xl border border-[#2a2a31] bg-[#16161a] px-4 text-sm text-zinc-100 placeholder:text-zinc-500 outline-none focus:border-zinc-500"
+          className="h-12 flex-1 rounded-xl border border-[#2a2a31] bg-[#0e0e10] px-4 text-sm text-zinc-100 placeholder:text-zinc-500 outline-none focus:border-zinc-500"
         />
         <button type="submit" className="h-12 shrink-0 rounded-xl bg-zinc-100 px-5 text-sm font-semibold text-zinc-900">
           Adicionar
         </button>
       </form>
 
-      {/* Mobile tabs */}
       <div className="flex gap-2 sm:hidden">
         <button
           onClick={() => setActiveTab("video")}
@@ -283,7 +278,6 @@ export default function RoomView() {
         </button>
       </div>
 
-      {/* Main layout: desktop 2 colunas; mobile empilhado */}
       <div className="grid flex-1 gap-4 md:grid-cols-[1fr_340px] md:min-h-0">
         <div className={activeTab === "chat" ? "hidden md:flex md:flex-col md:gap-4" : "flex flex-col gap-4"}>
           <VideoPlayer
@@ -325,7 +319,6 @@ export default function RoomView() {
             }}
           />
 
-          {/* Info + controles */}
           <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-[#2a2a31] bg-[#16161a] px-4 py-3">
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-zinc-100">{videoTitle || videoId || "Nenhum vídeo carregado"}</p>
@@ -338,7 +331,6 @@ export default function RoomView() {
                 onClick={() => {
                   manualStartRef.current = true;
                   setManualStart(true);
-                  // eslint-disable-next-line no-console
                   console.log("[YT] PLAY_REQUESTED", videoId);
                   playerRef.current?.play();
                   push("play", { playbackState: "playing" });

@@ -1,30 +1,50 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseServer } from "@/lib/supabase";
-import { getSoleRoom, requireParticipant } from "@/lib/server/auth";
+import { supabaseServer } from "@/lib/auth-server";
 
 export async function DELETE(req: NextRequest) {
   try {
-    const token = req.cookies.get("wt_session")?.value;
-    const room = await getSoleRoom();
-    await requireParticipant(room.id, token);
+    const supabase = await supabaseServer();
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session) {
+      return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+    }
 
     const url = new URL(req.url);
+    const roomId = url.searchParams.get("roomId");
     const id = url.searchParams.get("id");
-    if (!id) return NextResponse.json({ error: "id obrigatório." }, { status: 400 });
 
-    const supabase = getSupabaseServer();
+    if (!roomId) {
+      return NextResponse.json({ error: "roomId obrigatório." }, { status: 400 });
+    }
+    if (!id) {
+      return NextResponse.json({ error: "id obrigatório." }, { status: 400 });
+    }
+
+    // Verificar acesso (owner ou participant)
+    const { data: participant } = await supabase
+      .from("room_participants")
+      .select("id,user_id")
+      .eq("room_id", roomId)
+      .eq("user_id", session.user.id)
+      .single();
+
+    if (!participant) {
+      return NextResponse.json({ error: "Não autorizado para esta sala." }, { status: 403 });
+    }
+
     const { error } = await supabase
       .from("video_queue")
       .delete()
       .eq("id", id)
-      .eq("room_id", room.id);
+      .eq("room_id", roomId);
     if (error) return NextResponse.json({ error: "Falha ao remover." }, { status: 500 });
 
-    // Reindexa posições
+    // Reindexar posições
     const { data: remaining } = await supabase
       .from("video_queue")
       .select("id")
-      .eq("room_id", room.id)
+      .eq("room_id", roomId)
       .order("position", { ascending: true })
       .order("created_at", { ascending: true });
     if (remaining) {
