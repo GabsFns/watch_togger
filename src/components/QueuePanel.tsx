@@ -30,7 +30,7 @@ export function QueuePanel(props: {
                 >
                   {it.video_title ?? it.video_id}
                 </button>
-                <p className="text-xs text-zinc-500">por {it.added_by ?? "—"}</p>
+                <p className="text-xs text-zinc-500">por participante {it.added_by_participant_id ?? "—"}</p>
               </div>
               <button
                 onClick={() => onRemove(it)}
